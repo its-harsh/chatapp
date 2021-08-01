@@ -1,12 +1,9 @@
 import React from "react";
-import {BrowserRouter as Router, Link, Route, withRouter} from "react-router-dom";
+import {BrowserRouter as Router, Link, Route, Redirect, withRouter} from "react-router-dom";
 import './App.css';
 
 const API_HOST_URL = 'http://localhost:8000'
 const WEBSOCKET_HOST_URL = 'ws://localhost:8000'
-let ACCESS_TOKEN = null
-let REFRESH_TOKEN = null
-let USERNAME = null
 
 function represent_datetime(timestamp) {
     let datetime = new Date(timestamp)
@@ -14,11 +11,11 @@ function represent_datetime(timestamp) {
 }
 
 class AuthUtils {
-    static get_auth_tokens(credentials) {
+    static get_auth_tokens(user_credentials) {
         return fetch(`${API_HOST_URL}/auth/login/`, {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(credentials)
+            body: JSON.stringify(user_credentials)
         })
             .then(response => response.json())
     }
@@ -27,35 +24,13 @@ class AuthUtils {
         return fetch(`${API_HOST_URL}/auth/login/refresh/`, {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({'refresh_token': REFRESH_TOKEN})
+            body: JSON.stringify({'refresh': localStorage.getItem('refresh_token')})
         })
             .then(response => response.json())
     }
 
-    static login(credentials = null) {
-        if (REFRESH_TOKEN) {
-            this.refresh_access_token()
-                .then(data => {
-                    ACCESS_TOKEN = data.access_token
-                })
-                .catch(error => {
-                    ACCESS_TOKEN = null
-                    REFRESH_TOKEN = null
-                })
-        } else if (credentials) {
-            this.get_auth_tokens(credentials)
-                .then(data => {
-                    ACCESS_TOKEN = data.access_token
-                    REFRESH_TOKEN = data.refresh_token
-                    USERNAME = credentials.username
-                })
-        } else {
-        }
-    }
-
-    static logout() {
-        ACCESS_TOKEN = null
-        REFRESH_TOKEN = null
+    static is_authenticated() {
+        return localStorage.getItem('access_token') && localStorage.getItem('refresh_token')
     }
 }
 
@@ -72,7 +47,6 @@ class App extends React.Component {
                     </Route>
                     <Route exact path="/">
                         <ChatRoomList/>
-                        <h1>Select a chatroom</h1>
                     </Route>
                     <Route path="/chat/:room_uuid/">
                         <ChatBox/>
@@ -90,27 +64,35 @@ class ChatRoomList extends React.Component {
     }
 
     componentDidMount() {
-        fetch(`${API_HOST_URL}/api/list_room/`)
-            .then(response => response.json())
-            .then(data => this.setState({'room_list': data}))
+        if (AuthUtils.is_authenticated())
+            fetch(`${API_HOST_URL}/api/list_room/`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+                }
+            })
+                .then(response => response.json())
+                .then(data => this.setState({'room_list': data}))
     }
 
     render() {
-        return (
-            <div className="d-flex flex-nowrap">
-                <div className="d-flex flex-column align-items-stretch flex-shrink-0 bg-white"
-                     style={{width: 480}}>
-                    <a href="/"
-                       className="d-flex align-items-center flex-shrink-0 p-3 link-dark text-decoration-none border-bottom">
-                        <span className="fs-2 fw-semibold">ChatsApp</span>
-                    </a>
-                    <div className="list-group list-group-flush border-bottom scrollarea">
-                        {this.state.room_list && this.state.room_list.map(room =>
-                            (<ChatRoomListItem room={room} key={room.uuid}/>))}
+        if (AuthUtils.is_authenticated())
+            return (
+                <div className="d-flex flex-nowrap">
+                    <div className="d-flex flex-column align-items-stretch flex-shrink-0 bg-white"
+                         style={{width: 480}}>
+                        <a href="/"
+                           className="d-flex align-items-center flex-shrink-0 p-3 link-dark text-decoration-none border-bottom">
+                            <span className="fs-2 fw-semibold">ChatsApp</span>
+                        </a>
+                        <div className="list-group list-group-flush border-bottom scrollarea">
+                            {this.state.room_list && this.state.room_list.map(room =>
+                                (<ChatRoomListItem room={room} key={room.uuid}/>))}
+                        </div>
                     </div>
                 </div>
-            </div>
-        );
+            );
+        else return <Redirect to='/login/'/>
     }
 }
 
@@ -145,7 +127,7 @@ class ChatRoomListItem extends React.Component {
     }
 }
 
-class ChatBoxR extends React.Component {
+class ChatBoxHOC extends React.Component {
     constructor(props) {
         super(props);
         this.state = {}
@@ -201,7 +183,7 @@ class ChatBoxR extends React.Component {
     }
 }
 
-const ChatBox = withRouter(ChatBoxR)
+const ChatBox = withRouter(ChatBoxHOC)
 
 class Message extends React.Component {
     render() {
@@ -233,26 +215,36 @@ class FloatingLabelsInput extends React.Component {
 class LoginForm extends React.Component {
     constructor(props) {
         super(props);
+        this.state = {'success': false}
         this.login_request = this.login_request.bind(this)
     }
 
     login_request(event) {
         event.preventDefault()
-        AuthUtils.login(
-            {
-                'username': document.querySelector('#username').value,
-                'password': document.querySelector('#password').value
-            }
-        )
+        AuthUtils.get_auth_tokens({
+            username: document.querySelector('#username').value,
+            password: document.querySelector('#password').value
+        })
+            .then((json_data) => {
+                if (json_data.access && json_data.refresh) {
+                    localStorage.setItem('access_token', json_data.access)
+                    localStorage.setItem('refresh_token', json_data.refresh)
+                    this.setState({'success': true})
+                }
+            })
+            .catch()
     }
 
     render() {
-        return (
-            <main className="form-signin">
+        if (this.state.success || AuthUtils.is_authenticated())
+            return <Redirect to="/"/>
+        else return (
+            <main className="form-auth">
                 <form onSubmit={this.login_request}>
                     <h1 className="h3 mb-3 fw-normal">Please Sign In</h1>
                     <FloatingLabelsInput type='text' field_id='username' label='Username'/>
                     <FloatingLabelsInput type='password' field_id='password' label='Password'/>
+                    <p>Don't have an account <Link to='/register/'>Register Here</Link></p>
                     <button className="w-100 btn btn-lg btn-primary" type="submit">Sign in</button>
                 </form>
             </main>
@@ -261,10 +253,54 @@ class LoginForm extends React.Component {
 }
 
 class RegisterForm extends React.Component {
+    constructor(props) {
+        super(props);
+        this.state = {'success': false}
+        this.signup_request = this.signup_request.bind(this)
+    }
+
+    signup_request(event) {
+        event.preventDefault()
+        let username = document.querySelector('#username').value
+        let password = document.querySelector('#password').value
+        let confirm_password = document.querySelector('#confirm_password').value
+        if (password === confirm_password)
+            fetch(`${API_HOST_URL}/auth/register/`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    username: username,
+                    email: document.querySelector('#email').value,
+                    password: password
+                })
+            })
+                .then(response => response.json())
+                .then(json_data => {
+                    if (json_data.username && json_data.email) {
+                        this.setState({'success': true})
+                    }
+                })
+                .catch()
+    }
+
     render() {
-        return (
-            <h1>Register Form</h1>
-        )
+        if (this.state.success)
+            return <Redirect to="/login/"/>
+        else if (AuthUtils.is_authenticated())
+            return <Redirect to="/"/>
+        else return (
+                <main className="form-auth">
+                    <form onSubmit={this.signup_request}>
+                        <h1 className="h3 mb-3 fw-normal">Please Sign Up</h1>
+                        <FloatingLabelsInput type='text' field_id='username' label='Username'/>
+                        <FloatingLabelsInput type='email' field_id='email' label='Email'/>
+                        <FloatingLabelsInput type='password' field_id='password' label='Password'/>
+                        <FloatingLabelsInput type='password' field_id='confirm_password' label='Confirm Password'/>
+                        <p>Already have an account <Link to='/login/'>Login Here</Link></p>
+                        <button className="w-100 btn btn-lg btn-primary" type="submit">Sign Up</button>
+                    </form>
+                </main>
+            )
     }
 }
 
