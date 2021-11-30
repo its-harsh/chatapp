@@ -1,3 +1,76 @@
+from django.http.response import Http404
+from rest_framework import generics, permissions, serializers
+from .models import Group, user_groups_list
+from .serializers import GroupParticpantSerializer, GroupSerializer
+from .permissions import IsGroupAdminOrReadOnly
+
+
+class GroupCreateView(generics.CreateAPIView):
+    serializer_class = GroupSerializer
+    permission_classes = [permissions.IsAuthenticated, ]
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context['extra_fields'] = ('description', )
+        return context
+
+
+class GroupListView(generics.ListAPIView):
+    serializer_class = GroupSerializer
+    permission_classes = [permissions.IsAuthenticated, ]
+
+    def get_queryset(self):
+        return user_groups_list(self.request.user)
+
+
+class GroupCreateView(generics.CreateAPIView):
+    serializer_class = GroupSerializer
+    permission_classes = [permissions.IsAuthenticated, ]
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context['extra_fields'] = ('description', )
+        return context
+
+
+class GroupView(generics.RetrieveUpdateDestroyAPIView):
+    serializer_class = GroupSerializer
+    permission_classes = [permissions.IsAuthenticated, ]
+    lookup_field = 'id'
+
+    def get_object(self):
+        for group in user_groups_list(self.request.user):
+            if group.id == self.kwargs['id']:
+                return group
+        raise Http404
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context['extra_fields'] = ('description', )
+        return context
+
+
+class ParticipantListView(generics.ListAPIView):
+    serializer_class = GroupParticpantSerializer
+    permission_class = [permissions.IsAuthenticated, ]
+
+    def get_queryset(self):
+        return Group.objects.get(
+            id=self.kwargs['id']
+        ).groupparticipant_set.all()
+
+
+class PartcipantView(generics.RetrieveUpdateDestroyAPIView):
+    serializer_class = GroupParticpantSerializer
+    permission_class = [IsGroupAdminOrReadOnly, ]
+
+    def get_queryset(self):
+        return Group.objects.get(
+            id=self.kwargs['id']
+        ).groupparticipant_set.filter(
+            user__username=self.kwargs['username']
+        )
+
 # from rest_framework import generics, response, permissions
 # from rest_framework_simplejwt.authentication import JWTAuthentication
 # from django.http import Http404

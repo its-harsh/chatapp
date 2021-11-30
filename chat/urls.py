@@ -1,7 +1,10 @@
-# from django.urls import path
-# from .views import ChatRoomList, LastMessage
+from django.urls import path
+from .views import GroupListView, GroupView, GroupCreateView, ParticipantListView
 
-# urlpatterns = [
-#     path('api/list_room/', ChatRoomList.as_view()),
-#     path('api/last_message/<uuid:chatroom>/', LastMessage.as_view()),
-# ]
+urlpatterns = [
+    path('api/list-group/', GroupListView.as_view(), name='list-group-api'),
+    path('api/group/', GroupCreateView.as_view(), name='group-create-api'),
+    path('api/group/<int:id>/', GroupView.as_view(), name='group-info-api'),
+    path('api/group/<int:id>/participants/',
+         ParticipantListView.as_view(), name='list-participant-api'),
+]
