@@ -24,7 +24,7 @@ class GroupParticipant(models.Model):
                               to=Group, on_delete=models.CASCADE)
     user = models.ForeignKey(
         verbose_name='User', to=User, on_delete=models.CASCADE)
-    role = models.CharField(verbose_name='Role', max_length=1,
+    role = models.CharField(verbose_name='Role', max_length=1, default='n',
                             choices=(('a', 'Admin'), ('n', 'Normal')))
 
     # role_text = self.get_role_display()
