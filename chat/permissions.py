@@ -8,6 +8,9 @@ class ParticipantObjectPermission(permissions.BasePermission):
         return request.user.is_authenticated
 
     def has_object_permission(self, request, view, obj):
+        if obj.user == request.user and request.method == 'DELETE':
+            return True
+
         try:
             participant = GroupParticipant.objects.get(
                 group=obj.group, user=request.user)
@@ -15,7 +18,5 @@ class ParticipantObjectPermission(permissions.BasePermission):
             return False
 
         if participant.role == 'a':
-            return True
-        elif obj.user == request.user and request.method == 'DELETE':
             return True
         return False
