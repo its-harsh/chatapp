@@ -29,7 +29,7 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
-    # 'channels',
+    'channels',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -73,7 +73,7 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'chat_core.wsgi.application'
-# ASGI_APPLICATION = 'chat_core.asgi.application'
+ASGI_APPLICATION = 'chat_core.asgi.application'
 
 # CORS_ORIGIN_WHITELIST = ('http://localhost:3000',)
 
