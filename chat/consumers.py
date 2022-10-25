@@ -35,3 +35,6 @@ class ChatRoomConsumer(WebsocketConsumer):
                     .order_by('timestamp'), many=True
             ).data)
         )
+
+    def new_message(self, event):
+        print("New Message")

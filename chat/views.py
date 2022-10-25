@@ -17,7 +17,7 @@ class ChatRoomList(generics.ListAPIView):
 class LastMessage(generics.RetrieveAPIView):
     serializer_class = MessageSerializer
     permission_classes = [permissions.IsAuthenticated, ]
-    authentication_classes = [JWTAuthentication, ]
+    # authentication_classes = [JWTAuthentication, ]
 
     def retrieve(self, request, *args, **kwargs):
         try:
