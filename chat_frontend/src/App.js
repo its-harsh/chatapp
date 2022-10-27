@@ -1,6 +1,8 @@
 import React from "react";
 import {BrowserRouter as Router, Link, Route, Redirect, withRouter} from "react-router-dom";
 import './App.css';
+import { Auth } from "./js/auth";
+import { LoginForm, RegisterForm } from "./js/components/auth-forms";
 
 const API_HOST_URL = 'http://localhost:8000'
 const WEBSOCKET_HOST_URL = 'ws://localhost:8000'
@@ -8,30 +10,6 @@ const WEBSOCKET_HOST_URL = 'ws://localhost:8000'
 function represent_datetime(timestamp) {
     let datetime = new Date(timestamp)
     return `${datetime.toLocaleTimeString()} ${datetime.toLocaleDateString()}`
-}
-
-class AuthUtils {
-    static get_auth_tokens(user_credentials) {
-        return fetch(`${API_HOST_URL}/auth/login/`, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(user_credentials)
-        })
-            .then(response => response.json())
-    }
-
-    static refresh_access_token() {
-        return fetch(`${API_HOST_URL}/auth/login/refresh/`, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({'refresh': localStorage.getItem('refresh_token')})
-        })
-            .then(response => response.json())
-    }
-
-    static is_authenticated() {
-        return localStorage.getItem('access_token') && localStorage.getItem('refresh_token')
-    }
 }
 
 class App extends React.Component {
@@ -64,7 +42,8 @@ class ChatRoomList extends React.Component {
     }
 
     componentDidMount() {
-        if (AuthUtils.is_authenticated())
+        console.log(Auth.is_authenticated())
+        if (Auth.is_authenticated())
             fetch(`${API_HOST_URL}/api/list_room/`, {
                 method: 'GET',
                 headers: {
@@ -76,7 +55,7 @@ class ChatRoomList extends React.Component {
     }
 
     render() {
-        if (AuthUtils.is_authenticated())
+        if (Auth.is_authenticated())
             return (
                 <div className="d-flex flex-nowrap">
                     <div className="d-flex flex-column align-items-stretch flex-shrink-0 bg-white"
@@ -197,110 +176,6 @@ class Message extends React.Component {
                 </p>
             </div>
         );
-    }
-}
-
-class FloatingLabelsInput extends React.Component {
-    render() {
-        return (
-            <div className="form-floating">
-                <input type={this.props.type} className="form-control" id={this.props.field_id}
-                       placeholder={this.props.label}/>
-                <label htmlFor="{this.props.field_id}">{this.props.label}</label>
-            </div>
-        )
-    }
-}
-
-class LoginForm extends React.Component {
-    constructor(props) {
-        super(props);
-        this.state = {'success': false}
-        this.login_request = this.login_request.bind(this)
-    }
-
-    login_request(event) {
-        event.preventDefault()
-        AuthUtils.get_auth_tokens({
-            username: document.querySelector('#username').value,
-            password: document.querySelector('#password').value
-        })
-            .then((json_data) => {
-                if (json_data.access && json_data.refresh) {
-                    localStorage.setItem('access_token', json_data.access)
-                    localStorage.setItem('refresh_token', json_data.refresh)
-                    this.setState({'success': true})
-                }
-            })
-            .catch()
-    }
-
-    render() {
-        if (this.state.success || AuthUtils.is_authenticated())
-            return <Redirect to="/"/>
-        else return (
-            <main className="form-auth">
-                <form onSubmit={this.login_request}>
-                    <h1 className="h3 mb-3 fw-normal">Please Sign In</h1>
-                    <FloatingLabelsInput type='text' field_id='username' label='Username'/>
-                    <FloatingLabelsInput type='password' field_id='password' label='Password'/>
-                    <p>Don't have an account <Link to='/register/'>Register Here</Link></p>
-                    <button className="w-100 btn btn-lg btn-primary" type="submit">Sign in</button>
-                </form>
-            </main>
-        )
-    }
-}
-
-class RegisterForm extends React.Component {
-    constructor(props) {
-        super(props);
-        this.state = {'success': false}
-        this.signup_request = this.signup_request.bind(this)
-    }
-
-    signup_request(event) {
-        event.preventDefault()
-        let username = document.querySelector('#username').value
-        let password = document.querySelector('#password').value
-        let confirm_password = document.querySelector('#confirm_password').value
-        if (password === confirm_password)
-            fetch(`${API_HOST_URL}/auth/register/`, {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({
-                    username: username,
-                    email: document.querySelector('#email').value,
-                    password: password
-                })
-            })
-                .then(response => response.json())
-                .then(json_data => {
-                    if (json_data.username && json_data.email) {
-                        this.setState({'success': true})
-                    }
-                })
-                .catch()
-    }
-
-    render() {
-        if (this.state.success)
-            return <Redirect to="/login/"/>
-        else if (AuthUtils.is_authenticated())
-            return <Redirect to="/"/>
-        else return (
-                <main className="form-auth">
-                    <form onSubmit={this.signup_request}>
-                        <h1 className="h3 mb-3 fw-normal">Please Sign Up</h1>
-                        <FloatingLabelsInput type='text' field_id='username' label='Username'/>
-                        <FloatingLabelsInput type='email' field_id='email' label='Email'/>
-                        <FloatingLabelsInput type='password' field_id='password' label='Password'/>
-                        <FloatingLabelsInput type='password' field_id='confirm_password' label='Confirm Password'/>
-                        <p>Already have an account <Link to='/login/'>Login Here</Link></p>
-                        <button className="w-100 btn btn-lg btn-primary" type="submit">Sign Up</button>
-                    </form>
-                </main>
-            )
     }
 }
 
