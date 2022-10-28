@@ -131,9 +131,9 @@ class ChatBoxHOC extends React.Component {
     }
 
     connect() {
-        this.ws = new WebSocket(`${WEBSOCKET_HOST_URL}/chat/${this.props.match.params.room_uuid}/`)
+        this.ws = new WebSocket(`${WEBSOCKET_HOST_URL}/chat/${this.props.match.params.room_uuid}/?token=${Auth.get_token()}`)
         this.ws.onopen = ev => {
-            this.ws.send(JSON.stringify({'action': 'load_messages'}))
+            this.ws.send(JSON.stringify({'signal': 'load_messages'}))
         }
         this.ws.onmessage = ev => {
             this.setState({'messages': JSON.parse(ev.data)})
@@ -145,10 +145,9 @@ class ChatBoxHOC extends React.Component {
         let message = document.querySelector("textarea").value
         this.ws.send(JSON.stringify(
             {
-                'action': 'new_message', 'data': {
-                    'author': 'admin',
-                    'content': message
-                }
+                'signal': 'new_message',
+                'author': 'admin',
+                'content': message
             }
         ))
     }

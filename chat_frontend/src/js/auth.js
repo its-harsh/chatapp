@@ -33,6 +33,10 @@ export class Auth {
         return false;
     }
 
+    static get_token() {
+        return localStorage.getItem('auth_token');
+    }
+
     static logout() {
         localStorage.clear();
     }
