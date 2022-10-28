@@ -47,7 +47,7 @@ class ChatRoomList extends React.Component {
             fetch(`${API_HOST_URL}/api/list_room/`, {
                 method: 'GET',
                 headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+                    'Authorization': `Token ${localStorage.getItem('auth_token')}`,
                 }
             })
                 .then(response => response.json())
@@ -82,7 +82,13 @@ class ChatRoomListItem extends React.Component {
     }
 
     componentDidMount() {
-        fetch(`${API_HOST_URL}/api/last_message/${this.props.room.uuid}`)
+        fetch(`${API_HOST_URL}/api/last_message/${this.props.room.uuid}`,
+        {
+            method: 'GET',
+            headers: {
+                'Authorization': `Token ${localStorage.getItem('auth_token')}`,
+            }
+        })
             .then(response => response.json())
             .then(data => this.setState({'last_message': data}))
     }

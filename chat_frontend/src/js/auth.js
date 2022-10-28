@@ -9,7 +9,7 @@ export class Auth {
         });
         if (response.ok) {
             let data = await response.json();
-            localStorage.setItem('access_token', data.access);
+            localStorage.setItem('auth_token', data.token);
         }
         return response.ok;
     }
@@ -28,7 +28,7 @@ export class Auth {
     }
 
     static is_authenticated() {
-        if (localStorage.getItem('access_token'))
+        if (localStorage.getItem('auth_token'))
             return true;
         return false;
     }
