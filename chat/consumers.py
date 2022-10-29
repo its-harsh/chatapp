@@ -21,30 +21,44 @@ class ChatRoomConsumer(WebsocketConsumer):
             )
             self.accept()
 
+    def get_data(self, signal, payload):
+        if (signal == 'load_messages'):
+            return MessageSerializer(
+                        Message.objects
+                            .filter(chatroom__uuid=self.chatroom_id)
+                            .order_by('timestamp'), many=True
+                    ).data
+        elif (signal == 'new_message'):
+            message = Message.objects.create(
+                chatroom=ChatRoom.objects.get(uuid=self.chatroom_id),
+                content=payload['content'], author=self.user
+            )
+            return MessageSerializer(message).data
+
     def receive(self, text_data):
-        received_payload = json.loads(text_data);
-        signal = received_payload['signal']
-        received_payload.pop('signal')
+        payload = json.loads(text_data);
+        signal = payload['signal']
+        data = self.get_data(signal, payload)
         async_to_sync(self.channel_layer.group_send)(
             self.chatroom_name,
             {
                 'type': signal,
-                'payload': received_payload
+                'payload': data
             }
         )
 
     def load_messages(self, event):
         self.send(
-            text_data=json.dumps(MessageSerializer(
-                Message.objects
-                    .filter(chatroom__uuid=self.chatroom_id)
-                    .order_by('timestamp'), many=True
-            ).data)
+            text_data=json.dumps({
+                'signal': event['type'],
+                'messages': event['payload']
+            })
         )
 
     def new_message(self, event):
-        payload = event['payload']
-        Message.objects.create(
-            chatroom=ChatRoom.objects.get(uuid=self.chatroom_id),
-            content=payload['content'], author=self.user
+        self.send(
+            text_data=json.dumps({
+                'signal': event['type'],
+                'message': event['payload']
+            })
         )

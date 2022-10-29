@@ -1,27 +1,28 @@
 import { API_BASE_URL } from "./settings";
-
+import { APIUtils } from "./api-utils";
 export class Auth {
     static async login(username, password) {
-        let response = await fetch(`${API_BASE_URL}/auth/login/`, {
-            method: 'post',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({'username': username, 'password': password})
-        });
-        if (response.ok) {
-            let data = await response.json();
-            localStorage.setItem('auth_token', data.token);
+        let response = await APIUtils.post_api_response(
+            `auth/login/`,
+            {'Content-Type': 'application/json'},
+            {'username': username, 'password': password}
+        );
+        if (response !== null) {
+            localStorage.setItem('auth_token', response.token);
+            localStorage.setItem('username', response.username);
+            return true;
         }
-        return response.ok;
+        return false;
     }
 
     static async register(username, email, password) {
-        let response = await fetch(`${API_BASE_URL}/auth/register/`, {
-            method: 'post',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({'username': username, 'email': email, 'password': password})
-        });
-        if (response.ok) {
-            let login_success = await this.login(username, password);
+        let response = await APIUtils.post_api_response(
+            `auth/register/`,
+            {'Content-Type': 'application/json'},
+            {'username': username, 'email': email, 'password': password}
+        );
+        if (response !== null) {
+            let login_success = this.login(username, password);
             return login_success;
         }
         return false;
@@ -35,6 +36,10 @@ export class Auth {
 
     static get_token() {
         return localStorage.getItem('auth_token');
+    }
+
+    static get_user() {
+        return localStorage.getItem('username');
     }
 
     static logout() {
