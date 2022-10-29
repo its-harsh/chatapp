@@ -1,5 +1,4 @@
-from rest_framework import generics, response, permissions
-from rest_framework_simplejwt.authentication import JWTAuthentication
+from rest_framework import generics, response, permissions, authentication
 from django.http import Http404
 from .models import ChatRoom, Message
 from .serializers import ChatRoomSerializer, MessageSerializer
@@ -8,7 +7,7 @@ from .serializers import ChatRoomSerializer, MessageSerializer
 class ChatRoomList(generics.ListAPIView):
     serializer_class = ChatRoomSerializer
     permission_classes = [permissions.IsAuthenticated, ]
-    authentication_classes = [JWTAuthentication, ]
+    authentication_classes = [authentication.TokenAuthentication, ]
 
     def get_queryset(self):
         return ChatRoom.objects.filter(members__in=[self.request.user.id]).distinct()
@@ -17,7 +16,7 @@ class ChatRoomList(generics.ListAPIView):
 class LastMessage(generics.RetrieveAPIView):
     serializer_class = MessageSerializer
     permission_classes = [permissions.IsAuthenticated, ]
-    authentication_classes = [JWTAuthentication, ]
+    authentication_classes = [authentication.TokenAuthentication, ]
 
     def retrieve(self, request, *args, **kwargs):
         try:
